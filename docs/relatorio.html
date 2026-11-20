@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Implementando Padrões de Teste (Test Patterns)</title>
+<style>
+  @page { size: A4; margin: 1.8cm 2cm; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: Georgia, "Times New Roman", Times, serif;
+    font-size: 10.5pt;
+    line-height: 1.3;
+    color: #111;
+    background: #fff;
+    margin: 0;
+  }
+
+  h1, h2, h3 { font-family: Arial, Helvetica, sans-serif; color: #111; }
+  h2 { font-size: 13pt; margin: 14pt 0 6pt; border-bottom: 1px solid #999; padding-bottom: 2pt; }
+  h3 { font-size: 11pt; margin: 10pt 0 4pt; }
+  p { margin: 0 0 6pt; text-align: justify; }
+  ul { margin: 0 0 6pt; padding-left: 18pt; }
+  li { margin-bottom: 2pt; }
+
+  code { font-family: Consolas, "Courier New", monospace; font-size: 9pt; }
+  pre {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8pt;
+    line-height: 1.25;
+    background: #f2f2f2;
+    border: 1px solid #ddd;
+    padding: 5pt 7pt;
+    margin: 4pt 0 8pt;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  pre code { font-size: inherit; }
+
+  .rotulo { font-family: Arial, Helvetica, sans-serif; font-size: 9pt; font-weight: bold; margin: 6pt 0 0; break-after: avoid; page-break-after: avoid; }
+  .duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; break-inside: avoid; page-break-inside: avoid; }
+  .duas-colunas pre { margin-top: 2pt; font-size: 7.3pt; }
+
+  figure { margin: 6pt 0 8pt; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+  figure img { max-height: 5.2cm; border: 1px solid #ccc; }
+  figcaption { font-size: 9pt; color: #444; margin-top: 3pt; }
+
+  /* Capa */
+  .capa {
+    height: 25.5cm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    page-break-after: always;
+    break-after: page;
+  }
+  .capa .disciplina { font-family: Arial, Helvetica, sans-serif; font-size: 14pt; letter-spacing: 1pt; text-transform: uppercase; margin-top: 1cm; }
+  .capa h1 { font-size: 22pt; line-height: 1.3; margin: 0 1cm; }
+  .capa .aluno { font-size: 13pt; margin-bottom: 4pt; }
+  .capa .repo { font-size: 10pt; color: #333; }
+  .capa .data { font-size: 12pt; margin-bottom: 1cm; }
+</style>
+<style>
+  table { width: 100%; border-collapse: collapse; margin: 4pt 0 8pt; font-size: 9pt; break-inside: avoid; page-break-inside: avoid; }
+  th, td { border: 1px solid #bbb; padding: 3pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #eee; font-family: Arial, Helvetica, sans-serif; }
+</style>
+</head>
+<body>
+
+<section class="capa">
+  <div class="disciplina">Teste de Software</div>
+  <div>
+    <h1>Implementando Padrões de Teste <span style="white-space:nowrap">(Test Patterns)</span></h1>
+  </div>
+  <div>
+    <p class="aluno" style="text-align:center">Arthur Luiz Alves Soares</p>
+    <p class="repo" style="text-align:center">Repositório: https://github.com/ALuiz19/test-pattern</p>
+  </div>
+  <div class="data">Novembro de 2026</div>
+</section>
+
+<h2>1. Padrões de Criação de Dados (Builders)</h2>
+
+<p>Criei dois padrões em <code>__tests__/builders/</code>: o <code>UserMother</code>, um Object Mother com <code>umUsuarioPadrao()</code> e <code>umUsuarioPremium()</code>, e o <code>CarrinhoBuilder</code>, um Data Builder. Escolhi o padrão de cada entidade pelo quanto ela varia entre os testes.</p>
+
+<h3>1.1 Por que CarrinhoBuilder e não CarrinhoMother</h3>
+
+<p>Um usuário só tem dois tipos relevantes para o checkout, <code>PADRAO</code> e <code>PREMIUM</code>. Dois métodos fixos cobrem todos os casos, e o <code>UserMother</code> continua pequeno.</p>
+
+<p>O carrinho combina três eixos independentes: o usuário, a quantidade de itens e o preço de cada item. Um Object Mother precisaria de um método por combinação: <code>umCarrinhoPremiumCom200Reais()</code>, <code>umCarrinhoPadraoVazio()</code>, <code>umCarrinhoPremiumComTresItens()</code> e assim por diante. Cada cenário novo exigiria um método novo, e o nome esconderia os valores que o teste usa.</p>
+
+<p>O <code>CarrinhoBuilder</code> parte de um carrinho válido (usuário padrão e 1 item de R$ 100) e oferece métodos fluentes que mudam só o necessário: <code>comUser(user)</code>, <code>comItens([...])</code>, <code>comItem(nome, preco)</code> e <code>vazio()</code>. Cada um devolve <code>this</code>, o que permite encadear as chamadas. O <code>build()</code> devolve um <code>Carrinho</code> novo com uma cópia da lista de itens, para que um teste não altere o carrinho de outro.</p>
+
+<h3>1.2 Antes e depois</h3>
+
+<div class="duas-colunas">
+  <div>
+    <p class="rotulo">Antes: setup manual</p>
+<pre><code>const user = new User(
+  2,
+  'Cliente Premium',
+  'premium@email.com',
+  'PREMIUM'
+);
+const itens = [
+  new Item('Teclado', 150),
+  new Item('Mouse', 50),
+];
+const carrinho = new Carrinho(user, itens);</code></pre>
+  </div>
+  <div>
+    <p class="rotulo">Depois: com UserMother e CarrinhoBuilder</p>
+<pre><code>const carrinho = new CarrinhoBuilder()
+  .comUser(UserMother.umUsuarioPremium())
+  .comItens([
+    new Item('Teclado', 150),
+    new Item('Mouse', 50),
+  ])
+  .build();</code></pre>
+  </div>
+</div>
+
+<p>No "antes", o leitor precisa saber a ordem dos parâmetros de <code>User</code> para entender que <code>2</code> é o id e <code>'PREMIUM'</code> é o tipo. O id e o nome não importam para o teste, mas aparecem com o mesmo peso que o tipo e os preços, que são o que importa. É o smell Obscure Setup.</p>
+
+<h3>1.3 Ganhos de legibilidade e manutenção</h3>
+<ul>
+  <li><strong>Legibilidade:</strong> o setup diz só o que o cenário exige, um cliente Premium e R$ 200 em itens. O resto vem dos valores padrão.</li>
+  <li><strong>Manutenção:</strong> se o construtor de <code>Carrinho</code> ou de <code>User</code> mudar, a correção acontece no builder e no Mother, e não em cada teste. Isso evita o smell Fragile Test.</li>
+  <li><strong>Independência:</strong> cada teste parte de um carrinho válido próprio e não depende de dados montados por outro teste.</li>
+</ul>
+
+<h2>2. Padrões de Test Doubles (Mocks vs. Stubs)</h2>
+
+<p>No teste de sucesso Premium, o <code>GatewayPagamento</code> e o <code>PedidoRepository</code> são stubs, e o <code>EmailService</code> é o mock.</p>
+
+<pre><code>// Arrange
+const carrinho = new CarrinhoBuilder()
+    .comUser(UserMother.umUsuarioPremium())
+    .comItens([new Item('Teclado', 150), new Item('Mouse', 50)])
+    .build();
+gatewayStub = { cobrar: jest.fn().mockResolvedValue({ success: true }) };
+repositoryStub = { salvar: jest.fn().mockImplementation(async (p) =&gt; ({ ...p, id: 42 })) };
+emailMock = { enviarEmail: jest.fn().mockResolvedValue(undefined) };
+const checkoutService = new CheckoutService(gatewayStub, repositoryStub, emailMock);
+
+// Act
+pedido = await checkoutService.processarPedido(carrinho, CARTAO);
+
+// Assert
+expect(gatewayStub.cobrar).toHaveBeenCalledWith(180, CARTAO);
+expect(emailMock.enviarEmail).toHaveBeenCalledTimes(1);
+expect(emailMock.enviarEmail).toHaveBeenCalledWith(
+    'premium@email.com', 'Seu Pedido foi Aprovado!', 'Pedido 42 no valor de R$180');</code></pre>
+
+<p>No arquivo, o Arrange e o Act ficam num <code>beforeEach</code>, e cada <code>it</code> verifica uma coisa: o valor cobrado, o e-mail enviado e o pedido retornado.</p>
+
+<table>
+  <tr><th>Dependência</th><th>Papel</th><th>O que o teste faz com ela</th><th>Verificação</th></tr>
+  <tr><td><code>GatewayPagamento</code></td><td>Stub (principalmente)</td><td>Responde <code>{ success: true }</code> para o fluxo seguir; o valor cobrado também é conferido</td><td>Estado (principal) e comportamento (argumento 180)</td></tr>
+  <tr><td><code>PedidoRepository</code></td><td>Stub</td><td>Devolve o pedido com <code>id: 42</code></td><td>Estado (pedido retornado)</td></tr>
+  <tr><td><code>EmailService</code></td><td>Mock</td><td>Registra a chamada para o teste conferir quantas vezes e com quais argumentos</td><td>Comportamento</td></tr>
+</table>
+
+<h3>2.1 Por que o GatewayPagamento é (principalmente) um Stub</h3>
+
+<p>O gateway está no teste para controlar o fluxo. O <code>CheckoutService</code> só cria o pedido se <code>cobrar()</code> devolver <code>success: true</code>, então o stub fornece essa resposta pré-definida sem chamar um gateway real. O resultado depende dessa resposta, e não de como o gateway foi usado: é a verificação de estado descrita por Fowler em <em>Mocks Aren't Stubs</em>.</p>
+
+<p>É "principalmente" stub porque o teste também confere que <code>cobrar</code> recebeu 180. O <code>totalFinal</code> do pedido retornado mostra o valor calculado, mas só o argumento enviado ao gateway prova que o cliente foi cobrado com o desconto. Meszaros chama esse uso de <em>Test Spy</em>: um stub que também registra as chamadas recebidas. Mesmo assim, a função principal do gateway no teste é responder.</p>
+
+<h3>2.2 Por que o EmailService é um Mock</h3>
+
+<p>O e-mail é um efeito colateral. O <code>processarPedido</code> não devolve nada sobre ele, e o checkout continua mesmo se o envio falhar. Não há estado para conferir, então a única forma de saber se o cliente foi avisado é verificar a interação: <code>enviarEmail</code> foi chamado 1 vez, para <code>premium@email.com</code>, com o assunto "Seu Pedido foi Aprovado!" e o corpo com o id e o valor do pedido. É a verificação de comportamento. No Jest, esse "mock" é um <code>jest.fn()</code> conferido depois da execução; na taxonomia de Meszaros isso também é um Test Spy, mas no sentido de Fowler é o double usado para verificar comportamento.</p>
+
+<h3>2.3 Dummies no teste de falha</h3>
+
+<p>No teste de falha no pagamento, o repositório e o serviço de e-mail são objetos vazios (<code>{}</code>). Eles só preenchem o construtor do <code>CheckoutService</code>. Eles deixam claro que nenhum dos dois deve ser usado quando o pagamento falha. Se o código chamasse o repositório por engano, o teste quebraria com <code>TypeError</code>. O e-mail é um caso diferente: a chamada fica dentro de um <code>try/catch</code> no <code>CheckoutService</code>, então o erro seria só registrado no console. A asserção é só de estado: <code>expect(pedido).toBeNull()</code>.</p>
+
+<p>Além dos dois cenários pedidos, adicionei dois testes: o cliente padrão é cobrado em R$ 200, sem desconto, e o checkout é concluído mesmo quando o envio de e-mail falha (<code>mockRejectedValue</code>). A suíte ficou com 6 testes, todos passando com <code>npm test</code>.</p>
+
+<p>Observação de ambiente: o projeto base declara <code>babel-jest</code>, mas não trazia configuração do Babel, e o Jest falhava nos <code>import</code>. Adicionei <code>babel.config.cjs</code> com <code>@babel/preset-env</code> e configurei o Jest para não tratar <code>__tests__/builders/</code> como suíte de teste.</p>
+
+<h2>3. Conclusão</h2>
+
+<p>No trabalho anterior, os test smells foram corrigidos depois de aparecerem. Aqui, os padrões foram escolhidos antes do primeiro teste, e os smells não chegaram a surgir.</p>
+
+<ul>
+  <li><strong>Builders contra Obscure Setup:</strong> o <code>UserMother</code> e o <code>CarrinhoBuilder</code> deixam no teste só os dados que definem o cenário, e uma mudança nas classes de domínio é corrigida num lugar só.</li>
+  <li><strong>Test doubles contra Fragile Test:</strong> nenhum teste depende de gateway, banco ou servidor de e-mail reais. A suíte roda em cerca de 1 segundo e falha por causa da regra de negócio, não da infraestrutura.</li>
+  <li><strong>Stub ou mock por escolha:</strong> usar stub para controlar respostas e mock só onde a interação é o resultado evita testes que conferem cada chamada interna e quebram a cada refatoração.</li>
+</ul>
+
+<p>Com esses padrões e a estrutura Arrange, Act, Assert, a suíte é rápida de ler, barata de manter e fácil de estender para novos cenários.</p>
+
+<p style="text-align:left"><strong>Referências:</strong> Jest, <em>Mock Functions</em> (jestjs.io/docs/mock-functions); Martin Fowler, <em>Mocks Aren't Stubs</em> (martinfowler.com/articles/mocksArentStubs.html); Gerard Meszaros, <em>xUnit Test Patterns</em> (xunitpatterns.com).</p>
+
+</body>
+</html>
